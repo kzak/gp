@@ -1,0 +1,17 @@
+numpy
+pandas
+plotly
+matplotlib
+SciencePlots
+seaborn
+scipy
+scikit-learn
+jupyterlab
+pytest
+black
+flake8
+isort
+tqdm
+jax
+jaxopt
+line-profiler
