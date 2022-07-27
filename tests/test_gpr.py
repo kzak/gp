@@ -2,18 +2,27 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 from models.gpr import *
+from models.kernel import *
 
 
 @pytest.fixture(scope="module")
 def X():
     X = np.random.normal(0, 1, size=(10, 2))
-    return X
+    return jnp.array(X)
 
 
-def test_rbf_kn(X):
-    N, _ = X.shape
+@pytest.fixture(scope="module")
+def y(X):
+    return jnp.sin(X) + np.random.normal(0, 1, size=X.shape)
 
-    Kx = rbf_kn(X, X, [1.0, 1.0])
 
-    assert (N, N) == Kx.shape
-    np.testing.assert_array_almost_equal(jnp.ones(N), jnp.diag(Kx))
+def test_gpr(X, y):
+    m = GPRegressor(Kernel(rbf_kn, [1.0, 1.0]))
+    m.fit(X, y)
+    m.optimize()
+
+    X_test = np.random.normal(0, 1, size=(1, 2))
+    mu, cov = m.predict(X_test)
+
+    assert len(X_test) == len(mu)
+    assert (len(X_test), len(X_test)) == cov.shape
