@@ -50,7 +50,7 @@ class GPRegressor:
 
         return mu, cov
 
-    def optimize(self, n_maxiter=1000, verbose=False, stable=True):
+    def optimize(self, n_maxiter=1000, verbose=False):
         """
         Optimize kernel parameters with given data {X, y}
         """
@@ -60,13 +60,13 @@ class GPRegressor:
             options={"maxiter": n_maxiter, "disp": verbose},
         )
 
-        params_pack = self.pack_params(self.k.kps)
+        params_pack = self.pack_params(self.k.ps)
         res = solver.run(init_params=params_pack)
         self.res = res
 
         kernel_params = self.unpack_params(res.params)
 
-        self.k.kps = kernel_params
+        self.k.ps = kernel_params
         self.Knn = self.k(self.X, self.X) + jitter(self.N, self.sgm_y)
         self.Knn_inv = inv(self.Knn)
 
@@ -78,29 +78,44 @@ class GPRegressor:
     def unpack_params(self, params):
         return softplus(params)
 
-    def loss_fn(self):
+    def loss_fn(self, naive=False):
+        """
+        Negative Log Loss function
+        -0.5 y.T @ K_inv @ y - 0.5 log|K| - 0.5*N log(2*pi)
+
+        Using Cholesky decomposition for stability of numerical calculation
+        - https://stats.stackexchange.com/questions/503058/relationship-between-cholesky-decomposition-and-matrix-inversion
+        - https://math.stackexchange.com/questions/3158303/using-cholesky-decomposition-to-compute-covariance-matrix-determinant
+        """
+
         def nll_fn(params):
             tau, sgm = self.unpack_params(params)
 
-            K = self.k.kfn(self.X, self.X, [tau, sgm]) + jitter(len(self.X), self.sgm_y)
+            K = self.k.fn(self.X, self.X, [tau, sgm]) + jitter(len(self.X), self.sgm_y)
             L = cholesky(K)
 
             S1 = solve_triangular(L, self.y, lower=True)
             S2 = solve_triangular(L.T, S1, lower=False)
-
-            # loglik = -0.5 y.T @ K_inv @ y - 0.5 log|K| - 0.5*N log(2*pi)
-
-            # Inversion with Choleskey decomposition
-            # https://stats.stackexchange.com/questions/503058/relationship-between-cholesky-decomposition-and-matrix-inversion
-
-            # Determinant with Choleskey decomposition
-            # https://math.stackexchange.com/questions/3158303/using-cholesky-decomposition-to-compute-covariance-matrix-determinant
 
             nll = 0
             nll += jnp.sum(jnp.log(jnp.diagonal(L)))
             nll += 0.5 * self.y.T.dot(S2)  # y.T L_inv L_inv y
             nll += 0.5 * self.N * jnp.log(2 * jnp.pi)
 
+            return nll[0][0]  # nll is (1, 1) matrix
+
+        # for test
+        def nll_fn_naive(params):
+            tau, sgm = self.unpack_params(params)
+
+            K = self.k.fn(self.X, self.X, [tau, sgm]) + jitter(len(self.X), self.sgm_y)
+
+            nll = 0
+            nll += 0.5 * slogdet(K)[1]
+            nll += 0.5 * self.y.T.dot(inv(K)).dot(self.y)
+            nll += 0.5 * self.N * jnp.log(2 * jnp.pi)
             return nll[0][0]
 
+        if naive:
+            return nll_fn_naive
         return nll_fn

@@ -3,11 +3,11 @@ import jax.numpy as jnp
 
 class Kernel:
     def __init__(self, kernel_fn, kernel_params):
-        self.kfn = kernel_fn
-        self.kps = jnp.array(kernel_params)
+        self.fn = kernel_fn
+        self.ps = jnp.array(kernel_params)
 
     def __call__(self, X1, X2, jittering=False):
-        K = self.kfn(X1, X2, self.kps)
+        K = self.fn(X1, X2, self.ps)
 
         if jittering:
             K = K + jitter(len(X1))
