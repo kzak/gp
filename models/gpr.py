@@ -73,10 +73,10 @@ class GPRegressor:
         return self
 
     def pack_params(self, params):
-        return softplus_inv(params)
+        return jnp.log(params)
 
     def unpack_params(self, params):
-        return softplus(params)
+        return jnp.exp(params)
 
     def loss_fn(self, naive=False):
         """
