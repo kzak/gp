@@ -18,7 +18,6 @@ class GPRegressor:
         Args:
             X: (n, d) matrix
             y: (n, 1) matrix
-            sgm_y: observation noise
         Returns:
             this instance
         """
@@ -43,8 +42,8 @@ class GPRegressor:
         K_inv_y = cho_solve((L, True), y)
         # Knn_inv = inv(Knn)
 
-        Kmm = self.k.nm(X_test, X_test) + jitter(len(X_test))
         Knm = self.k.nm(self.X, X_test)
+        Kmm = self.k.mm(X_test)
 
         mu = Knm.T.dot(K_inv_y)
         # mu = Knm.T.dot(Knn_inv).dot(y)

@@ -1,12 +1,13 @@
+import jax
 import jax.numpy as jnp
-import numpy as np
 import pytest
 from models.kernel import *
 
 
 @pytest.fixture(scope="module")
 def X():
-    X = np.random.normal(0, 1, size=(10, 2))
+    key = jax.random.PRNGKey(0)
+    X = jax.random.normal(key, shape=(10, 2))
     return X
 
 
@@ -16,4 +17,4 @@ def test_rbf_kn(X):
     Kx = rbf_kn(X, X, [1.0, 1.0])
 
     assert (N, N) == Kx.shape
-    np.testing.assert_array_almost_equal(jnp.ones(N), jnp.diag(Kx))
+    assert jnp.allclose(jnp.ones(N), jnp.diag(Kx))
