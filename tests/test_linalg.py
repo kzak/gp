@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-import numpy as np
 import pytest
 from jax.numpy.linalg import inv
 from models.kernel import *
@@ -9,13 +8,15 @@ from utils.linalg import *
 
 @pytest.fixture(scope="module")
 def X():
-    X = np.random.normal(0, 1, size=(10, 2))
+    key = jax.random.PRNGKey(0)
+    X = jax.random.normal(key, shape=(10, 2))
     return X
 
 
 @pytest.fixture(scope="module")
 def y(X):
-    noise = jax.random.normal(jax.random.PRNGKey(0), shape=(len(X),))
+    key = jax.random.PRNGKey(0)
+    noise = jax.random.normal(key, shape=(len(X),))
     return jnp.sin(jnp.linalg.norm(X, axis=1)) + noise
 
 
