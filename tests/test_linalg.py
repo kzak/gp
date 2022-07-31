@@ -20,11 +20,11 @@ def y(X):
     return jnp.sin(jnp.linalg.norm(X, axis=1)) + noise
 
 
-def test_K_inv_y(X, y):
+def test_cholesky_K_inv_y(X, y):
     K = rbf_kn(X, X, [1.0, 1.0])
 
     K_inv_y_naive = jnp.dot(inv(K), y)
-    K_inv_y_stable = K_inv_y(K, y)
+    K_inv_y_stable = cholesky_K_inv_y(cholesky(K), y)
 
     assert jnp.allclose(K_inv_y_naive, K_inv_y_stable, atol=1.0e-5)
 

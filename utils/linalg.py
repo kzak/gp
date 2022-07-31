@@ -4,18 +4,17 @@ from jax.numpy.linalg import cholesky, inv, slogdet
 from jax.scipy.linalg import solve_triangular
 
 
-def K_inv_y(K, y):
+def cholesky_K_inv_y(L, y):
     """
     Stable caclulation of K^{-1} y
     K^{-1} y = (L L.T)^{-1} y
+    see : https://stats.stackexchange.com/questions/503058/relationship-between-cholesky-decomposition-and-matrix-inversion
     Args:
         K : (n, n) positive semi-definite matrix
         y : (n, 1) matrix / vector
     Returns:
         (n, 1) matrix / vector of K^{-1} y
     """
-
-    L = cholesky(K)
 
     # s1 = L_inv y
     s1 = solve_triangular(L, y, lower=True)
@@ -26,6 +25,7 @@ def K_inv_y(K, y):
 
 def cholesky_logdet(L):
     """
+    see : https://math.stackexchange.com/questions/3158303/using-cholesky-decomposition-to-compute-covariance-matrix-determinant
     Args:
         L : Cholesky decomposition of a gram matrix K
     Returns:

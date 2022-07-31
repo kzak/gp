@@ -25,10 +25,10 @@ def rbf_kn(X1, X2, params):
         (n, m) matrix
         tau * exp(- 1/(2 * sigma^2) | x_i - x_j |^2 )
     """
-    tau, sigma = params
+    tau, sgm = params
 
     d = jnp.sum(X1**2, 1).reshape(-1, 1) + jnp.sum(X2**2, 1) - 2 * jnp.dot(X1, X2.T)
-    return tau * jnp.exp(-(0.5 * sigma**2) * d)
+    return tau * jnp.exp(-(0.5 / sgm**2) * d)
 
 
 def jitter(n, eps=1e-6):
