@@ -15,6 +15,18 @@ class Kernel:
         return K
 
 
+class RBFKernel:
+    def __init__(self, tau=1.0, sgm=1.0, eta=0.1):
+        self.fn = rbf_kn
+        self.ps = jnp.array([tau, sgm, eta])
+
+    def nm(self, X1, X2):
+        return self.fn(X1, X2, self.ps[0:2])
+
+    def nn(self, X):
+        return self.nm(X, X) + noise(len(X), self.ps[2])
+
+
 def rbf_kn(X1, X2, params):
     """
     Args:
@@ -29,6 +41,10 @@ def rbf_kn(X1, X2, params):
 
     d = jnp.sum(X1**2, 1).reshape(-1, 1) + jnp.sum(X2**2, 1) - 2 * jnp.dot(X1, X2.T)
     return tau * jnp.exp(-(0.5 / sgm**2) * d)
+
+
+def noise(n, eta):
+    return eta * jnp.eye(n)
 
 
 def jitter(n, eps=1e-6):

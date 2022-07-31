@@ -17,7 +17,7 @@ def y(X):
 
 
 def test_gpr(X, y):
-    m = GPRegressor(Kernel(rbf_kn, [1.0, 1.0]))
+    m = GPRegressor(RBFKernel(1.0, 1.0, 0.1))
     m.fit(X, y)
     m.optimize()
 

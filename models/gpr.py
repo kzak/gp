@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import jaxopt
 from jax import grad, jit, vmap
 from jax.numpy.linalg import cholesky, inv, slogdet
-from jax.scipy.linalg import solve_triangular
+from jax.scipy.linalg import cho_solve, solve_triangular
 from utils.linalg import cholesky_K_inv_y, cholesky_logdet
 
 from models.kernel import *
@@ -14,7 +14,7 @@ class GPRegressor:
     def __init__(self, kernel):
         self.k = kernel
 
-    def fit(self, X, y, sgm_y=1.0e-6):
+    def fit(self, X, y):
         """
         Args:
             X: (n, d) matrix
@@ -25,15 +25,11 @@ class GPRegressor:
         """
         self.X = X
         self.y = y
-        self.sgm_y = sgm_y
         self.N, self.D = X.shape
-
-        self.Knn = self.k(X, X) + jitter(self.N, eps=sgm_y)
-        self.Knn_inv = inv(self.Knn)
 
         return self
 
-    def predict(self, X_test):
+    def predict(self, X_test, naive=True):
         """
         Args:
             X_test: (m, d) matrix
@@ -42,12 +38,21 @@ class GPRegressor:
             cov: covariance over X_test
         """
         y = self.y
-        Knn_inv = self.Knn_inv
-        Kmm = self.k(X_test, X_test)
-        Knm = self.k(self.X, X_test)
+        Knn = self.k.nn(self.X)
+        L = cholesky(Knn)
 
-        mu = Knm.T.dot(Knn_inv).dot(y)
-        cov = Kmm - Knm.T.dot(Knn_inv).dot(Knm)
+        K_inv_y = cho_solve((L, True), y)
+        # Knn_inv = inv(Knn)
+
+        Kmm = self.k.nm(X_test, X_test) + jitter(len(X_test))
+        Knm = self.k.nm(self.X, X_test)
+
+        mu = Knm.T.dot(K_inv_y)
+        # mu = Knm.T.dot(Knn_inv).dot(y)
+
+        K_inv_Knm = cho_solve((L, True), Knm)
+        cov = Kmm - Knm.T.dot(K_inv_Knm)
+        # cov = Kmm - Knm.T.dot(Knn_inv).dot(Knm)
 
         return mu, cov
 
@@ -65,11 +70,7 @@ class GPRegressor:
         res = solver.run(init_params=params_pack)
         self.res = res
 
-        kernel_params = self.unpack_params(res.params)
-
-        self.k.ps = kernel_params
-        self.Knn = self.k(self.X, self.X) + jitter(self.N, self.sgm_y)
-        self.Knn_inv = inv(self.Knn)
+        self.k.ps = self.unpack_params(res.params)
 
         return self
 
@@ -86,12 +87,11 @@ class GPRegressor:
         """
 
         def nll_fn(params):
-            tau, sgm = self.unpack_params(params)
-
-            K = self.k.fn(self.X, self.X, [tau, sgm]) + jitter(len(self.X), self.sgm_y)
+            self.k.ps = self.unpack_params(params)
+            K = self.k.nn(self.X)
             L = cholesky(K)
 
-            K_inv_y = cholesky_K_inv_y(L, self.y)
+            K_inv_y = cho_solve((L, True), self.y)
 
             nll = 0
             nll += 0.5 * cholesky_logdet(L)
