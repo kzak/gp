@@ -2,10 +2,9 @@ from pdb import set_trace
 
 import jax.numpy as jnp
 import jaxopt
-from jax import grad, jit, vmap
-from jax.numpy.linalg import cholesky, inv, slogdet
-from jax.scipy.linalg import cho_solve, solve_triangular
-from utils.linalg import cholesky_K_inv_y, cholesky_logdet
+from jax.numpy.linalg import cholesky
+from jax.scipy.linalg import cho_solve
+from utils.linalg import cholesky_logdet
 
 from models.kernel import *
 
