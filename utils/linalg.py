@@ -22,3 +22,17 @@ def K_inv_y(K, y):
     # s2 = L_inv.T (L_inv y)
     s2 = solve_triangular(L.T, s1, lower=False)
     return s2
+
+
+def cholesky_logdet(L):
+    """
+    Args:
+        L : Cholesky decomposition of a gram matrix K
+    Returns:
+        log determinant of K
+    """
+
+    # det(K) = det(L L.T) = det(L) det(L.T) = det(L) ** 2
+    # logdet(K) = 2 * det(L) = 2 * \sum log(L_ii)
+
+    return 2 * jnp.sum(jnp.log(jnp.diagonal(L)))
