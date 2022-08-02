@@ -1,3 +1,5 @@
+from pdb import set_trace
+
 import jax.numpy as jnp
 
 
@@ -11,9 +13,6 @@ class RBFKernel:
 
     def nn(self, X):
         return self.nm(X, X) + self.ps[2] ** 2 * jnp.eye(len(X))
-
-    def mm(self, X):
-        return self.nm(X, X) + jitter(len(X))
 
 
 def rbf_kn(X1, X2, params):

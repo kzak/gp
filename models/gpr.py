@@ -36,21 +36,16 @@ class GPRegressor:
             cov: covariance over X_test
         """
         y = self.y
+
         Knn = self.k.nn(self.X)
         L = cholesky(Knn)
-
         K_inv_y = cho_solve((L, True), y)
-        # Knn_inv = inv(Knn)
-
         Knm = self.k.nm(self.X, X_test)
-        Kmm = self.k.mm(X_test)
-
         mu = Knm.T.dot(K_inv_y)
-        # mu = Knm.T.dot(Knn_inv).dot(y)
 
+        Kmm = self.k.nn(X_test)
         K_inv_Knm = cho_solve((L, True), Knm)
         cov = Kmm - Knm.T.dot(K_inv_Knm)
-        # cov = Kmm - Knm.T.dot(Knn_inv).dot(Knm)
 
         return mu, cov
 
@@ -73,10 +68,12 @@ class GPRegressor:
         return self
 
     def pack_params(self, params):
-        return jnp.log(params)
+        # return jnp.log(params)
+        return softplus_inv(params)
 
     def unpack_params(self, params):
-        return jnp.exp(params)
+        # return jnp.exp(params)
+        return softplus(params)
 
     def loss_fn(self):
         """
