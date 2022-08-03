@@ -18,7 +18,12 @@ class SGPRegressor:
     def __init__(self, kernel):
         self.k = kernel
 
-    def fit(self, X, y, n_inducing=10, sgm_y=0.1):
+        # TODO
+        # An error occur when optimizing 3rd kernel parameter, sgm_y
+        # So let it constant now.
+        self.sgm_y = kernel.ps[2]
+
+    def fit(self, X, y, n_inducing=10, rng_seed=0):
         """
         Args:
             X: (n, d) matrix
@@ -28,12 +33,11 @@ class SGPRegressor:
         """
         self.X = X
         self.y = y
-        self.sgm_y = sgm_y
         self.N, self.D = X.shape
         self.n_inducing = n_inducing
 
         self.inducing_points = random.choice(
-            random.PRNGKey(0), self.X, (n_inducing,), replace=False
+            random.PRNGKey(rng_seed), self.X, (n_inducing,), replace=False
         )
 
         return self
@@ -46,9 +50,10 @@ class SGPRegressor:
             fun=self.loss_fn(),
             method="L-BFGS-B",
             options={"maxiter": n_maxiter, "disp": verbose},
+            jit=(not verbose),
         )
 
-        params_pack = self.pack_params(jnp.array([1.0, 1.0]), self.inducing_points)
+        params_pack = self.pack_params(self.k.ps, self.inducing_points)
         res = solver.run(init_params=params_pack)
         self.res = res
 
@@ -60,15 +65,17 @@ class SGPRegressor:
         return jnp.hstack([softplus_inv(kernel_params), inducing_inputs.ravel()])
 
     def unpack_params(self, params):
-        kernel_params, inducing_inputs = jnp.split(params, [2])
+        kernel_params, inducing_inputs = jnp.split(params, [len(self.k.ps)])
         return softplus(kernel_params), inducing_inputs.reshape(self.n_inducing, self.D)
 
     def loss_fn(self):
         def nlb(params):
-            sigma_y = self.sgm_y
             kernel_params, X_m = self.unpack_params(params)
-            K_mm = self.k.fn(X_m, X_m, kernel_params) + jitter(X_m.shape[0])
-            K_mn = self.k.fn(X_m, self.X, kernel_params)
+            sigma_y = self.sgm_y
+            # sigma_y = kernel_params[2]
+
+            K_mm = self.k.fn(X_m, X_m, kernel_params[0:2]) + jitter(X_m.shape[0])
+            K_mn = self.k.fn(X_m, self.X, kernel_params[0:2])
 
             L = jnp.linalg.cholesky(K_mm)  # m x m
             A = jsp.linalg.solve_triangular(L, K_mn, lower=True) / sigma_y  # m x n
@@ -95,7 +102,9 @@ class SGPRegressor:
 
     def phi_opt(self):
         """Optimize mu_m and A_m using Equations (11) and (12)."""
+        # sigma_y = self.k.ps[2]
         sigma_y = self.sgm_y
+
         precision = 1.0 / sigma_y**2
         X_m = self.inducing_points
 
